@@ -1,6 +1,8 @@
-// VERSION 4 TEST — REAL DEPLOY FILE
+  import OpenAI from "openai";
 
-import OpenAI from "openai";
+// DEBUG CRASH TEST
+throw new Error("DEBUG_CRASH_LOCATION");
+
 
 export default async function handler(req, res) {
   // --- CORS FIX ---
