@@ -51,15 +51,32 @@ export default async function handler(req, res) {
     });
 
     // 4. Poll for completion
-    let status = run.status;
-    while (status !== "completed") {
-      await new Promise(r => setTimeout(r, 1000));
-      const check = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
-      status = check.status;
-      if (status === "failed") {
-        return res.status(500).json({ error: "Assistant run failed." });
-      }
+    // Poll until run is completed AND an assistant message exists
+let completed = false;
+let lastMessageId = null;
+
+while (!completed) {
+  await new Promise(r => setTimeout(r, 900));
+
+  const curRun = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
+
+  if (curRun.status === "failed") {
+    return res.status(500).json({ error: "Assistant run failed." });
+  }
+
+  if (curRun.status === "completed") {
+    const list = await client.beta.threads.messages.list(finalThreadId);
+
+    const assistantMsg = list.data.find(m => m.role === "assistant");
+
+    if (assistantMsg) {
+      lastMessageId = assistantMsg.id;
+      completed = true;
+      break;
     }
+  }
+}
+
 
     // 5. Fetch assistant reply
     const messages = await client.beta.threads.messages.list(finalThreadId);
