@@ -1,12 +1,18 @@
 import OpenAI from "openai";
 
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
 export default async function handler(req, res) {
 
-  // --- CORS ALLOW Shopify Domain ---
+  // --- CORS ALLOW STORE7994.COM ---
   res.setHeader("Access-Control-Allow-Origin", "https://store7994.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  
+
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -19,13 +25,14 @@ export default async function handler(req, res) {
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const { message, threadId } = JSON.parse(req.body || "{}");
+    // 🟢 FIX: Vercel already parses JSON body
+    const { message, threadId } = req.body || {};
 
     if (!message) {
       return res.status(400).json({ error: "Missing message." });
     }
 
-    // 1. If no threadId, create one
+    // 1. Create thread if missing
     let finalThreadId = threadId;
     if (!finalThreadId) {
       const thread = await client.beta.threads.create();
@@ -43,24 +50,23 @@ export default async function handler(req, res) {
       assistant_id: "asst_NmKYDW1h87isRpw1NlO7eJuF"
     });
 
-    // 4. Poll until complete (simple polling)
-    let runStatus = run.status;
-    while (runStatus !== "completed") {
+    // 4. Poll for completion
+    let status = run.status;
+    while (status !== "completed") {
       await new Promise(r => setTimeout(r, 1000));
-      const updatedRun = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
-      runStatus = updatedRun.status;
-
-      if (runStatus === "failed") {
+      const check = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
+      status = check.status;
+      if (status === "failed") {
         return res.status(500).json({ error: "Assistant run failed." });
       }
     }
 
-    // 5. Retrieve messages
-    const msgs = await client.beta.threads.messages.list(finalThreadId);
-
-    const reply = msgs.data
-      .filter(m => m.role === "assistant")
-      .pop()?.content?.[0]?.text?.value || "I'm sorry, I didn't understand.";
+    // 5. Fetch assistant reply
+    const messages = await client.beta.threads.messages.list(finalThreadId);
+    const reply =
+      messages.data
+        .filter(m => m.role === "assistant")
+        .pop()?.content?.[0]?.text?.value || "I am here to assist you!";
 
     return res.status(200).json({
       threadId: finalThreadId,
@@ -73,5 +79,6 @@ export default async function handler(req, res) {
   }
 
 }
+
 
 
