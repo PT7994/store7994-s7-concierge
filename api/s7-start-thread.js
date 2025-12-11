@@ -12,7 +12,8 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Unable to create thread" });
-  }
+  console.error("THREAD CREATION ERROR:", error);
+  res.status(500).json({ error: error.message });
+}
+
 }
