@@ -63,7 +63,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error("S7-CHAT ERROR:", err);
-    return res.status(500).json({ error: err.message });
-  }
+    console.error("CONCIERGE ERROR:", err);
+    
+    return res.status(500).json({
+      error: err?.message || "Unknown failure",
+      stack: err?.stack || null
+    });
 }
+
