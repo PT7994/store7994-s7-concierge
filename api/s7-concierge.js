@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   // --- CORS FIX ---
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -64,7 +64,8 @@ export default async function handler(req, res) {
 
     // 5. Get messages
     const messages = await client.beta.threads.messages.list(threadId);
-    const assistantReply = messages.data.filter(msg => msg.role === "assistant").pop();
+    const assistantReply =
+      messages.data.filter(msg => msg.role === "assistant").pop();
 
     res.status(200).json({
       status: "success",
@@ -78,5 +79,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
