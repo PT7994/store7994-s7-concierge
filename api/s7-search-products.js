@@ -29,7 +29,8 @@ export default async function handler(req, res) {
       title: p.title,
       price: p.price,
       image: p.image,
-      url: `https://store7994.com/products/${p.handle}`
+      url: p.url
+
     }));
 
     res.status(200).json({
