@@ -1,73 +1,71 @@
-  import OpenAI from "openai";
+ // ---- S7 CHAT ENDPOINT (WORKING VERSION) ----
 
-// DEBUG CRASH TEST
-throw new Error("DEBUG_CRASH_LOCATION");
-
+import OpenAI from "openai";
 
 export default async function handler(req, res) {
-  // --- CORS FIX ---
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // --- CORS FIX (WORKS WITH SHOPIFY & VERCEL) ---
+  res.setHeader("Access-Control-Allow-Origin", "https://store7994.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+  // -------------------------------------------------
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "POST required." });
+    return res.status(405).json({ error: "Use POST method." });
   }
 
   try {
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    const { message, threadId } = JSON.parse(req.body || "{}");
 
-    const body = JSON.parse(req.body);
+    if (!message) {
+      return res.status(400).json({ error: "Missing message." });
+    }
 
-    const { message, threadId } = body;
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    if (!message) return res.status(400).json({ error: "Missing message" });
-    if (!threadId) return res.status(400).json({ error: "Missing threadId" });
-
-    // Send message
+    // 1. Send user message
     await client.beta.threads.messages.create(threadId, {
       role: "user",
       content: message
     });
 
-    // Run assistant
+    // 2. Run assistant
     const run = await client.beta.threads.runs.create(threadId, {
-      assistant_id: process.env.ASSISTANT_ID
+      assistant_id: "asst_NmKYDW1h87isRpw1NlO7eJuF"
     });
 
-    // Poll for completion
+    // 3. Poll until ready
     let status = run.status;
+
     while (status !== "completed") {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 1100));
       const updated = await client.beta.threads.runs.retrieve(threadId, run.id);
       status = updated.status;
+
       if (status === "failed") {
-        return res.status(500).json({ error: "Assistant run failed" });
+        throw new Error("Assistant run failed.");
       }
     }
 
-    const list = await client.beta.threads.messages.list(threadId);
-    const reply = list.data.find(m => m.role === "assistant");
+    // 4. Read assistant reply
+    const msgs = await client.beta.threads.messages.list(threadId);
+    const last = msgs.data.find(m => m.role === "assistant");
 
-    return res.status(200).json({
-      reply: reply?.content?.[0]?.text?.value || "No reply produced.",
-      threadId
-    });
+    const reply =
+      last?.content?.[0]?.text?.value ||
+      "I'm here, but I could not generate a response.";
+
+    return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error("REAL S7 CHAT ERROR:", err);
-    return res.status(500).json({
-      error: err?.message || "Unknown failure",
-      stack: err?.stack || null
-    });
+    console.error("S7 CHAT ERROR:", err);
+    return res.status(500).json({ error: "Chat endpoint failure." });
   }
 }
+
 
 
 
