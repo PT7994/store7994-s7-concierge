@@ -80,10 +80,15 @@ while (!completed) {
 
     // 5. Fetch assistant reply
     const messages = await client.beta.threads.messages.list(finalThreadId);
-    const reply =
-      messages.data
-        .filter(m => m.role === "assistant")
-        .pop()?.content?.[0]?.text?.value || "I am here to assist you!";
+    // Get newest assistant message only
+const latestAssistantMessage = messages.data.find(
+  m => m.role === "assistant"
+);
+
+const reply =
+  latestAssistantMessage?.content?.[0]?.text?.value ||
+  "I'm here to assist you!";
+
 
     return res.status(200).json({
       threadId: finalThreadId,
