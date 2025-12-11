@@ -1,4 +1,4 @@
-// VERSION 3 TEST
+// VERSION 4 TEST — REAL DEPLOY FILE
 
 import OpenAI from "openai";
 
@@ -11,23 +11,22 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-  // -----------------
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST required." });
   }
 
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
 
-    const { message, threadId } = JSON.parse(req.body);
+    const body = JSON.parse(req.body);
 
-    if (!message) {
-      return res.status(400).json({ error: "Missing message" });
-    }
-    if (!threadId) {
-      return res.status(400).json({ error: "Missing threadId" });
-    }
+    const { message, threadId } = body;
+
+    if (!message) return res.status(400).json({ error: "Missing message" });
+    if (!threadId) return res.status(400).json({ error: "Missing threadId" });
 
     // Send message
     await client.beta.threads.messages.create(threadId, {
@@ -43,16 +42,14 @@ export default async function handler(req, res) {
     // Poll for completion
     let status = run.status;
     while (status !== "completed") {
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 1000));
       const updated = await client.beta.threads.runs.retrieve(threadId, run.id);
       status = updated.status;
-
       if (status === "failed") {
-        return res.status(500).json({ error: "Assistant run failed." });
+        return res.status(500).json({ error: "Assistant run failed" });
       }
     }
 
-    // Retrieve messages
     const list = await client.beta.threads.messages.list(threadId);
     const reply = list.data.find(m => m.role === "assistant");
 
@@ -62,12 +59,13 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("S7 CHAT ERROR:", err);
+    console.error("REAL S7 CHAT ERROR:", err);
     return res.status(500).json({
-      error: err?.message || "Chat endpoint failure.",
+      error: err?.message || "Unknown failure",
       stack: err?.stack || null
     });
   }
 }
+
 
 
