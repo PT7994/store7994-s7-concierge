@@ -1,15 +1,15 @@
-// S7 Product Search endpoint with full CORS support
+// FINAL S7 Product Search endpoint with CORS + full product URLs
 
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
 
-  // ----- CORS FIX -----
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // ----- CORS -----
+  res.setHeader("Access-Control-Allow-Origin", "https://store7994.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
-  // ---------------------
+  // -----------------
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST required" });
@@ -29,8 +29,7 @@ export default async function handler(req, res) {
       title: p.title,
       price: p.price,
       image: p.image,
-      url: p.url
-
+      url: `https://store7994.com${p.url}`  // <-- FIXED FULL URL
     }));
 
     res.status(200).json({
