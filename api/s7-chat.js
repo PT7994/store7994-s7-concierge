@@ -1,6 +1,6 @@
 // ==============================================
-// S7 CHAT ENDPOINT — RESPONSES API (ROLLBACK)
-// Deterministic, no greetings, no threads
+// S7 CHAT ENDPOINT — RESPONSES API (CLEAN UX)
+// Returns real product objects (no raw JSON text)
 // ==============================================
 
 import OpenAI from "openai";
@@ -29,12 +29,12 @@ export default async function handler(req, res) {
       apiKey: process.env.OPENAI_API_KEY
     });
 
-    // ---------- BASIC INTENT CHECK ----------
+    // Simple product intent detection
     const looksLikeProduct =
       /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|gucci|fendi|prada|leather|dress|jacket|coat|wallet|belt)/i
         .test(message);
 
-    // ---------- IF PRODUCT → SEARCH ----------
+    // ---------- PRODUCT SEARCH ----------
     if (looksLikeProduct) {
       const searchResponse = await fetch(
         "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
@@ -47,18 +47,19 @@ export default async function handler(req, res) {
 
       const productJson = await searchResponse.json();
 
+      // ✅ RETURN PRODUCTS AS OBJECT (NOT STRING)
       return res.status(200).json({
-        reply: JSON.stringify(productJson)
+        reply: productJson
       });
     }
 
-    // ---------- OTHERWISE: SHORT AI RESPONSE ----------
+    // ---------- SHORT TEXT RESPONSE ----------
     const response = await client.responses.create({
       model: "gpt-4.1-2025-04-14",
       input: [
         {
           role: "system",
-          content: "Respond briefly and directly. Do not greet. Do not use filler."
+          content: "Respond briefly and directly. No greetings. No filler."
         },
         {
           role: "user",
@@ -76,7 +77,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Chat failure." });
   }
 }
-
-
-
-
