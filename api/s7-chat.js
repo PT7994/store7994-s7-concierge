@@ -1,6 +1,6 @@
 // ==============================================
-// S7 CHAT ENDPOINT — RESPONSES API (CLEAN UX)
-// Stable, fast, no greetings, correct identity
+// S7 CHAT ENDPOINT — STABLE MODE (CHAT COMPLETIONS)
+// No Assistants, no Responses API, no crashes
 // ==============================================
 
 import OpenAI from "openai";
@@ -31,13 +31,8 @@ export default async function handler(req, res) {
 
     // ---------- PRODUCT INTENT DETECTION ----------
     const looksLikeProduct =
-  /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|
-     earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|
-     ring|rings|pendant|pendants|
-     gucci|fendi|prada|cartier|chanel|dior|
-     leather|dress|jacket|coat|wallet|belt)/ix
-    .test(message);
-
+      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|ring|rings|pendant|pendants|gucci|fendi|prada|cartier|chanel|dior|leather|dress|jacket|coat|wallet|belt)/i
+        .test(message);
 
     // ---------- PRODUCT SEARCH ----------
     if (looksLikeProduct) {
@@ -57,21 +52,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // ---------- TEXT RESPONSE (IDENTITY-SAFE) ----------
-    const response = await client.chat.completions.create({
-  model: "gpt-4.1-2025-04-14",
-  messages: [
-    {
-      role: "system",
-      content: "You are the S7 Concierge for STORE 7994. Respond briefly, no greetings."
-    },
-    {
-      role: "user",
-      content: message
-    }
-  ]
-});
-
+    // ---------- TEXT RESPONSE (STABLE + IDENTITY SAFE) ----------
+    const completion = await client.chat.completions.create({
+      model: "gpt-4.1-2025-04-14",
+      messages: [
+        {
           role: "system",
           content: `
 You are the S7 Concierge for STORE 7994.
@@ -97,9 +82,8 @@ Behavior:
     });
 
     return res.status(200).json({
-  reply: response?.output_text || ""
-});
-
+      reply: completion.choices[0].message.content
+    });
 
   } catch (err) {
     console.error("S7 CHAT ERROR:", err);
