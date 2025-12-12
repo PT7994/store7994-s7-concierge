@@ -1,10 +1,6 @@
 // ==============================================
-// S7 CHAT ENDPOINT — FUNCTION CALL VERSION (FINAL)
-// Supports:
-// - Assistant function calling
-// - Shopify product search
-// - JSON product card passthrough
-// - Full CORS
+// S7 CHAT ENDPOINT — RESPONSES API (ROLLBACK)
+// Deterministic, no greetings, no threads
 // ==============================================
 
 import OpenAI from "openai";
@@ -16,125 +12,68 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://store7994.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  // ---------------------------
+  if (req.method === "OPTIONS") return res.status(200).end();
+  // --------------------------
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST required." });
   }
 
   try {
-    const { message, threadId } = req.body;
-
+    const { message } = req.body;
     if (!message) {
-      return res.status(400).json({ error: "Message is required." });
+      return res.status(400).json({ error: "Message required." });
     }
 
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
 
-    let finalThreadId = threadId;
+    // ---------- BASIC INTENT CHECK ----------
+    const looksLikeProduct =
+      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|gucci|fendi|prada|leather|dress|jacket|coat|wallet|belt)/i
+        .test(message);
 
-    // Create thread if missing
-    if (!finalThreadId) {
-      const newThread = await client.beta.threads.create();
-      finalThreadId = newThread.id;
-    }
-
-    // Add user message
-    await client.beta.threads.messages.create(finalThreadId, {
-      role: "user",
-      content: message
-    });
-
-    // Run assistant
-    const run = await client.beta.threads.runs.create(finalThreadId, {
-      assistant_id: process.env.ASSISTANT_ID
-    });
-
-    let status = run.status;
-    let runData = run;
-
-    // Poll until completed or requires_action
-    while (status !== "completed" && status !== "requires_action") {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      runData = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
-      status = runData.status;
-    }
-
-    // -----------------------------------------
-    // STEP 1 — ASSISTANT REQUESTED A FUNCTION?
-    // -----------------------------------------
-    if (status === "requires_action") {
-      const tool = runData.required_action.submit_tool_outputs.tool_calls?.[0];
-
-      if (tool?.function?.name === "searchProducts") {
-        const q = JSON.parse(tool.function.arguments).query;
-
-        // Call your Vercel product search endpoint
-        const searchResponse = await fetch(
-          "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: q })
-          }
-        );
-
-        const productJson = await searchResponse.json();
-
-        // Send the product results back to the assistant
-        await client.beta.threads.runs.submitToolOutputs(finalThreadId, run.id, {
-          tool_outputs: [
-            {
-              tool_call_id: tool.id,
-              output: JSON.stringify(productJson)
-            }
-          ]
-        });
-
-        // Now fetch the assistant’s actual reply
-        let completed = null;
-        while (true) {
-          await new Promise((r) => setTimeout(r, 1200));
-          const check = await client.beta.threads.runs.retrieve(finalThreadId, run.id);
-          if (check.status === "completed") {
-            completed = check;
-            break;
-          }
+    // ---------- IF PRODUCT → SEARCH ----------
+    if (looksLikeProduct) {
+      const searchResponse = await fetch(
+        "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: message })
         }
+      );
 
-        const msgs = await client.beta.threads.messages.list(finalThreadId);
-        const latest = msgs.data.filter(m => m.role === "assistant").pop();
+      const productJson = await searchResponse.json();
 
-        return res.status(200).json({
-          threadId: finalThreadId,
-          reply: latest?.content?.[0]?.text?.value || "",
-        });
-      }
+      return res.status(200).json({
+        reply: JSON.stringify(productJson)
+      });
     }
 
-    // -----------------------------------------
-    // STEP 2 — NORMAL TEXT RESPONSE
-    // -----------------------------------------
-    const messages = await client.beta.threads.messages.list(finalThreadId);
-
-    const latest = messages.data
-      .filter(m => m.role === "assistant")
-      .pop();
+    // ---------- OTHERWISE: SHORT AI RESPONSE ----------
+    const response = await client.responses.create({
+      model: "gpt-4.1-2025-04-14",
+      input: [
+        {
+          role: "system",
+          content: "Respond briefly and directly. Do not greet. Do not use filler."
+        },
+        {
+          role: "user",
+          content: message
+        }
+      ]
+    });
 
     return res.status(200).json({
-      threadId: finalThreadId,
-      reply: latest?.content?.[0]?.text?.value || ""
+      reply: response.output_text || ""
     });
 
   } catch (err) {
-    console.error("CHAT ENDPOINT ERROR:", err);
-    return res.status(500).json({ error: "Chat endpoint failure." });
+    console.error("S7 CHAT ERROR:", err);
+    return res.status(500).json({ error: "Chat failure." });
   }
 }
 
