@@ -31,8 +31,13 @@ export default async function handler(req, res) {
 
     // ---------- PRODUCT INTENT DETECTION ----------
     const looksLikeProduct =
-      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|gucci|fendi|prada|leather|dress|jacket|coat|wallet|belt)/i
-        .test(message);
+  /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|
+     earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|
+     ring|rings|pendant|pendants|
+     gucci|fendi|prada|cartier|chanel|dior|
+     leather|dress|jacket|coat|wallet|belt)/ix
+    .test(message);
+
 
     // ---------- PRODUCT SEARCH ----------
     if (looksLikeProduct) {
