@@ -1,4 +1,4 @@
-// FINAL S7 Product Search endpoint with CORS + full product URLs
+// S7 Product Search endpoint — FIXED price handling + honest results
 
 import fetch from "node-fetch";
 
@@ -16,29 +16,65 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { query } = req.body;
+    const { query = "" } = req.body;
+
+    // -----------------------------
+    // 1. Extract price limit (if any)
+    // -----------------------------
+    let maxPrice = null;
+    const priceMatch = query.replace(/,/g, "").match(/under\s*\$?(\d+)|\$?(\d+)/i);
+
+    if (priceMatch) {
+      maxPrice = parseFloat(priceMatch[1] || priceMatch[2]);
+    }
+
+    // -----------------------------
+    // 2. Clean query for Shopify
+    // -----------------------------
+    const cleanQuery = query
+      .replace(/under\s*\$?\d+/gi, "")
+      .replace(/\$?\d+/g, "")
+      .trim();
 
     const response = await fetch(
-      `https://store7994.com/search/suggest.json?q=${encodeURIComponent(query)}&resources[type]=product`
+      `https://store7994.com/search/suggest.json?q=${encodeURIComponent(cleanQuery)}&resources[type]=product`
     );
 
     const data = await response.json();
-    const products = data.resources.results.products || [];
+    let products = data?.resources?.results?.products || [];
 
-    const formatted = products.map(p => ({
+    // -----------------------------
+    // 3. Normalize + price filter
+    // -----------------------------
+    let items = products.map(p => ({
       title: p.title,
-      price: p.price,
+      price: Number(p.price),
       image: p.image,
-      url: `https://store7994.com${p.url}`  // <-- FIXED FULL URL
+      url: `https://store7994.com${p.url}`
     }));
 
-    res.status(200).json({
+    if (maxPrice) {
+      items = items.filter(p => !isNaN(p.price) && p.price <= maxPrice);
+    }
+
+    // -----------------------------
+    // 4. Return HONEST results
+    // -----------------------------
+    if (items.length === 0) {
+      return res.status(200).json({
+        type: "products",
+        items: [],
+        message: "No matching products were found for this search."
+      });
+    }
+
+    return res.status(200).json({
       type: "products",
-      items: formatted
+      items
     });
 
   } catch (error) {
     console.error("SEARCH API ERROR:", error);
-    res.status(500).json({ error: "Search failure" });
+    return res.status(500).json({ error: "Search failure" });
   }
 }
