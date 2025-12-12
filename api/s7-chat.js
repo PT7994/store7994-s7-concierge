@@ -54,19 +54,24 @@ export default async function handler(req, res) {
     }
 
     // ---------- SHORT TEXT RESPONSE ----------
-    const response = await client.responses.create({
-      model: "gpt-4.1-2025-04-14",
-      input: [
-        {
-          role: "system",
-          content: "Respond briefly and directly. No greetings. No filler."
-        },
-        {
-          role: "user",
-          content: message
-        }
-      ]
-    });
+    {
+  role: "system",
+  content: `
+You are the S7 Concierge for STORE 7994.
+
+Identity rules:
+- Your name is "S7 Concierge".
+- Never refer to yourself as ChatGPT, AI, assistant, or model.
+- If asked who you are, respond: "I’m the S7 Concierge for STORE 7994."
+- Do not mention OpenAI or underlying technology.
+
+Behavior:
+- Respond briefly and directly.
+- No greetings or filler.
+- Focus on fashion and shopping guidance only.
+`
+}
+
 
     return res.status(200).json({
       reply: response.output_text || ""
