@@ -1,6 +1,6 @@
 // ==============================================
 // S7 CHAT ENDPOINT — RESPONSES API (CLEAN UX)
-// Returns real product objects (no raw JSON text)
+// Stable, fast, no greetings, correct identity
 // ==============================================
 
 import OpenAI from "openai";
@@ -29,9 +29,9 @@ export default async function handler(req, res) {
       apiKey: process.env.OPENAI_API_KEY
     });
 
-    // Simple product intent detection
+    // ---------- PRODUCT INTENT DETECTION ----------
     const looksLikeProduct =
-      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|gucci|fendi|prada|leather|dress|jacket|coat|wallet|belt)/i
+      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|gucci|fendi|prada|leather|dress|jacket|coat|wallet|belt)/i
         .test(message);
 
     // ---------- PRODUCT SEARCH ----------
@@ -47,16 +47,18 @@ export default async function handler(req, res) {
 
       const productJson = await searchResponse.json();
 
-      // ✅ RETURN PRODUCTS AS OBJECT (NOT STRING)
       return res.status(200).json({
         reply: productJson
       });
     }
 
-    // ---------- SHORT TEXT RESPONSE ----------
-    {
-  role: "system",
-  content: `
+    // ---------- TEXT RESPONSE (IDENTITY-SAFE) ----------
+    const response = await client.responses.create({
+      model: "gpt-4.1-2025-04-14",
+      input: [
+        {
+          role: "system",
+          content: `
 You are the S7 Concierge for STORE 7994.
 
 Identity rules:
@@ -67,11 +69,17 @@ Identity rules:
 
 Behavior:
 - Respond briefly and directly.
-- No greetings or filler.
-- Focus on fashion and shopping guidance only.
+- No greetings.
+- No filler.
+- Focus only on fashion and shopping guidance.
 `
-}
-
+        },
+        {
+          role: "user",
+          content: message
+        }
+      ]
+    });
 
     return res.status(200).json({
       reply: response.output_text || ""
