@@ -58,10 +58,20 @@ export default async function handler(req, res) {
     }
 
     // ---------- TEXT RESPONSE (IDENTITY-SAFE) ----------
-    const response = await client.responses.create({
-      model: "gpt-4.1-2025-04-14",
-      input: [
-        {
+    const response = await client.chat.completions.create({
+  model: "gpt-4.1-2025-04-14",
+  messages: [
+    {
+      role: "system",
+      content: "You are the S7 Concierge for STORE 7994. Respond briefly, no greetings."
+    },
+    {
+      role: "user",
+      content: message
+    }
+  ]
+});
+
           role: "system",
           content: `
 You are the S7 Concierge for STORE 7994.
@@ -87,8 +97,9 @@ Behavior:
     });
 
     return res.status(200).json({
-      reply: response.output_text || ""
-    });
+  reply: response?.output_text || ""
+});
+
 
   } catch (err) {
     console.error("S7 CHAT ERROR:", err);
