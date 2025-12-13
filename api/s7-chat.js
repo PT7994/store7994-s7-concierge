@@ -30,9 +30,19 @@ export default async function handler(req, res) {
     });
 
     // ---------- PRODUCT INTENT DETECTION ----------
-    const looksLikeProduct =
-      /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|ring|rings|pendant|pendants|gucci|fendi|prada|cartier|chanel|dior|leather|dress|jacket|coat|wallet|belt)/i
-        .test(message);
+    const productCategories = {
+  fashion: /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|ring|rings|pendant|pendants|hoodie|jacket|coat|wallet|belt)/i,
+
+  brands: /(gucci|fendi|prada|cartier|chanel|dior|balenciaga|versace|givenchy|bottega)/i,
+
+  home: /(furniture|chair|chairs|table|tables|sofa|couch|lamp|lighting|rug|rugs|mirror|mirrors|home decor|decor|vase|shelf|shelves|art|wall art)/i,
+
+  store7994: /(store\s*7994|s7|custom|wearable art)/i
+};
+
+const looksLikeProduct = Object.values(productCategories)
+  .some(regex => regex.test(message));
+
 
     // ---------- PRODUCT SEARCH ----------
     if (looksLikeProduct) {
