@@ -44,12 +44,15 @@ export default async function handler(req, res) {
     const productCategories = {
   fashion: /(bag|handbag|shoe|shoes|boot|boots|hat|hats|sneaker|sneakers|watch|watches|earring|earrings|bracelet|bracelets|necklace|necklaces|jewelry|ring|rings|pendant|pendants|hoodie|jacket|coat|wallet|belt)/i,
 
-  brands: /(gucci|fendi|prada|cartier|chanel|dior|balenciaga|versace|givenchy|bottega)/i,
+  brands: /(gucci|fendi|prada|cartier|chanel|dior|balenciaga|versace|givenchy|bottega|louis vuitton|lv)/i,
+
+  electronics: /(laptop|laptops|notebook|computer|macbook|headphone|headphones|earphone|earphones|earbud|earbuds|audio|speaker|speakers|amplifier|amp|dac|turntable|hi[- ]?fi|sound system)/i,
 
   home: /(furniture|chair|chairs|table|tables|sofa|couch|lamp|lighting|rug|rugs|mirror|mirrors|home decor|decor|vase|shelf|shelves|art|wall art)/i,
 
   store7994: /(store\s*7994|s7|custom|wearable art)/i
 };
+
 
 const looksLikeProduct = Object.values(productCategories)
   .some(regex => regex.test(message));
