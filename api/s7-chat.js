@@ -51,7 +51,10 @@ const looksLikeProduct = Object.values(productCategories)
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: message })
+          const cleanQuery = extractSearchQuery(message);
+
+body: JSON.stringify({ query: cleanQuery })
+
         }
       );
 
