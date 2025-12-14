@@ -6,6 +6,17 @@
 import OpenAI from "openai";
 import fetch from "node-fetch";
 
+function extractSearchQuery(message) {
+  return message
+    .toLowerCase()
+    .replace(
+      /show me|find|looking for|search for|i want|please|can you|could you|recommend/g,
+      ""
+    )
+    .trim();
+}
+
+
 export default async function handler(req, res) {
 
   // ---------- CORS ----------
@@ -45,25 +56,26 @@ const looksLikeProduct = Object.values(productCategories)
 
 
     // ---------- PRODUCT SEARCH ----------
-    if (looksLikeProduct) {
-      const searchResponse = await fetch(
-        "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          const cleanQuery = extractSearchQuery(message);
+if (looksLikeProduct) {
 
-body: JSON.stringify({ query: cleanQuery })
+  const cleanQuery = extractSearchQuery(message);
 
-        }
-      );
-
-      const productJson = await searchResponse.json();
-
-      return res.status(200).json({
-        reply: productJson
-      });
+  const searchResponse = await fetch(
+    "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: cleanQuery })
     }
+  );
+
+  const productJson = await searchResponse.json();
+
+  return res.status(200).json({
+    reply: productJson
+  });
+}
+
 
     // ---------- TEXT RESPONSE (STABLE + IDENTITY SAFE) ----------
     const completion = await client.chat.completions.create({
