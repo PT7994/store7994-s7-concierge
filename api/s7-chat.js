@@ -16,6 +16,19 @@ function extractSearchQuery(message) {
     .trim();
 }
 
+// ================================
+// CATEGORY NORMALIZATION MAP
+// ================================
+const categoryMap = {
+  pants: ["chino", "jogger", "cargo", "trouser", "slim"],
+  trousers: ["chino", "tailored", "slim"],
+  mens_pants: ["chino", "jogger", "cargo", "tailored"],
+  women_pants: ["tailored", "wide leg", "slim", "cropped"],
+  jeans: ["jeans", "denim"],
+  shoes: ["sneakers", "boots", "heels", "loafers"],
+  bags: ["handbag", "shoulder bag", "tote", "crossbody"]
+};
+
 
 export default async function handler(req, res) {
 
@@ -96,6 +109,39 @@ if (browseIntent && lastIntent.brand && lastIntent.category) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: forcedQuery })
+    }
+  );
+
+  const productJson = await searchResponse.json();
+
+  return res.status(200).json({
+    reply: productJson
+  });
+}
+
+    // ================================
+// GENERIC CATEGORY OVERRIDE
+// ================================
+const genericCategoryMatch = message.match(
+  /(men'?s\s*pants|pants|trousers|women'?s\s*pants)/i
+);
+
+if (genericCategoryMatch) {
+  const key = genericCategoryMatch[0]
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/['’]/g, "");
+
+  const expandedTerms = categoryMap[key] || categoryMap["pants"];
+
+  const expandedQuery = expandedTerms.join(" ");
+
+  const searchResponse = await fetch(
+    "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: expandedQuery })
     }
   );
 
