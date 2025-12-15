@@ -36,6 +36,32 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Message required." });
     }
 
+    // ================================
+// S7 INTENT MEMORY (SESSION-SAFE)
+// ================================
+let lastIntent = {
+  brand: null,
+  category: null
+};
+
+// Basic brand + category detection
+const brandMatch = message.match(
+  /(dolce\s*&?\s*gabbana|gucci|fendi|prada|chanel|dior|balenciaga|versace|givenchy|bottega)/i
+);
+
+const categoryMatch = message.match(
+  /(heels|shoes|sneakers|boots|handbags|bags|pumps|sandals|hats|jackets|coats|watches|jewelry|earrings|bracelets|necklaces)/i
+);
+
+// Save intent if detected
+if (brandMatch || categoryMatch) {
+  lastIntent = {
+    brand: brandMatch ? brandMatch[1] : lastIntent.brand,
+    category: categoryMatch ? categoryMatch[1] : lastIntent.category
+  };
+}
+
+
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
@@ -56,6 +82,29 @@ export default async function handler(req, res) {
 
 const looksLikeProduct = Object.values(productCategories)
   .some(regex => regex.test(message));
+// ================================
+// FORCE SEARCH ON BROWSE INTENT
+// ================================
+const browseIntent = /(show me|see what|browse|what do you have|those|them)/i.test(message);
+
+if (browseIntent && lastIntent.brand && lastIntent.category) {
+  const forcedQuery = `${lastIntent.brand} ${lastIntent.category}`;
+
+  const searchResponse = await fetch(
+    "https://store7994-s7-concierge.vercel.app/api/s7-search-products",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: forcedQuery })
+    }
+  );
+
+  const productJson = await searchResponse.json();
+
+  return res.status(200).json({
+    reply: productJson
+  });
+}
 
 
     // ---------- PRODUCT SEARCH ----------
